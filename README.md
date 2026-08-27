@@ -37,11 +37,9 @@ settings:
   # ru - русский, en - english, ua - українська
   language: en
 
-  # Кулдаун между сообщениями игроку (в миллисекундах)
-  # 3000 = 3 секунды, чтобы не спамить при повторных попытках
-  # Cooldown between messages to player (in milliseconds)
-  # 3000 = 3 seconds, to avoid spam on repeated attempts
-  message_cooldown: 3000
+  # Кулдаун между сообщениями игроку (в секундах), чтобы не спамить при повторных попытках
+  # Cooldown between messages to player (in seconds), to avoid spam on repeated attempts
+  message_cooldown: 3
 
   # Список миров, где запрещены элитры
   # List of worlds where elytra is disabled
@@ -65,24 +63,33 @@ settings:
   # Stop active elytra flight in disabled worlds
   stop_existing_glide: true
 
-  # Грубый анти-байпас: проверять каждый тик (может нагружать сервер)
-  # true - максимальная защита (проверка каждый тик), false - экономия производительности
-  # Rough anti-bypass: check every tick (may affect server performance)
-  # true - maximum protection (check every tick), false - performance saving
-  check_every_tick: true
+  # Дополнительная подстраховка на редкие случаи обхода. Основная защита не нагружает
+  # сервер и работает мгновенно. В тиках (20 = 1 секунда). 0 - отключить.
+  # Extra safety net for rare bypass cases. Main protection is instant and has no
+  # performance cost. In ticks (20 = 1 second). 0 to disable.
+  safety_net_interval_ticks: 100
 
-  # Воспроизводить звук при блокировке элитр
-  # Play sound when elytra is blocked
-  play_sound: true
+  # Способ показа сообщений (чат / текст над инвентарём / по центру экрана) и звук
+  # настраиваются не здесь, а прямо в файлах lang/<язык>.yml - у каждого сообщения свои.
+  # Смотрите комментарии в начале lang/ru.yml.
+  #
+  # How messages are shown (chat / text above the inventory / center of the screen) and
+  # their sound are configured per-message in lang/<language>.yml, not here.
+  # See the comments at the top of lang/en.yml.
 
-  # Тип звука (список звуков: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Sound.html)
-  # Sound type (sound list: https://hub.spigotmc.org/javadocs/spigot/org/bukkit/Sound.html)
-  # Популярные варианты / Popular options:
-  # - ENTITY_VILLAGER_NO
-  # - BLOCK_ANVIL_LAND
-  # - ENTITY_ENDERMAN_TELEPORT
-  # - BLOCK_NOTE_BLOCK_BASS
-  sound_type: "ENTITY_VILLAGER_NO"
+# ===================================================================
+# PlaceholderAPI (если установлен на сервере) / PlaceholderAPI (if installed)
+# ===================================================================
+# %elytradisabled_world_disabled% - запрещены ли элитры в текущем мире игрока
+# %elytradisabled_bypass%         - есть ли у игрока право обхода (bypass)
+# %elytradisabled_blocked%        - реально ли блокируется прямо сейчас (мир запрещён И нет bypass)
+# Текст для true/false настраивается в lang/<язык>.yml: placeholder_true / placeholder_false
+#
+# %elytradisabled_world_disabled% - whether elytra is disabled in the player's current world
+# %elytradisabled_bypass%         - whether the player has the bypass permission
+# %elytradisabled_blocked%        - whether it's actually being blocked right now (world
+#                                    disabled AND no bypass)
+# The true/false text is configured in lang/<language>.yml: placeholder_true / placeholder_false
 
 permissions:
   # Игроки с этим пермишеном могут использовать элитры в любых мирах
