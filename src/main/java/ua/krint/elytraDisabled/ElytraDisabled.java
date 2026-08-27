@@ -1,7 +1,9 @@
 package ua.krint.elytraDisabled;
 
+import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
+import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -13,6 +15,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.List;
 
 public class ElytraDisabled extends JavaPlugin {
@@ -22,14 +25,22 @@ public class ElytraDisabled extends JavaPlugin {
     private static final long RESPAWN_DELAY_TICKS = 2L;
     private static final long COOLDOWN_CLEANUP_INTERVAL = 6000L;
 
+    private static final int BSTATS_PLUGIN_ID = 33682;
+
     private FileConfiguration config;
     private FileConfiguration langConfig;
     private ElytraListener listener;
-    private ElytraTickChecker tickChecker;
+    private ElytraSafetyNetTask safetyNetTask;
     private UpdateChecker updateChecker;
+    private final MessageCooldown messageCooldown = new MessageCooldown();
     private String currentLanguage;
 
     private String bypassPermission;
+    private boolean preventEquip;
+    private boolean forceUnequipOnEnter;
+    private boolean stopExistingGlide;
+    private long messageCooldownMillis;
+    private long safetyNetIntervalTicks;
 
     @Override
     public void onEnable() {
@@ -46,7 +57,7 @@ public class ElytraDisabled extends JavaPlugin {
         listener = new ElytraListener(this);
         Bukkit.getPluginManager().registerEvents(listener, this);
 
-        startTickChecker();
+        startSafetyNet();
 
         ElytraCommand command = new ElytraCommand(this);
         getCommand("elytra-disabled").setExecutor(command);
@@ -58,6 +69,9 @@ public class ElytraDisabled extends JavaPlugin {
             checkForUpdates();
         }
 
+        setupMetrics();
+        setupPlaceholders();
+
         getLogger().info("ElytraDisabled enabled successfully!");
         getLogger().info("Language: " + currentLanguage);
         getLogger().info("Protection active in worlds: " + config.getStringList("settings.disable_in_worlds"));
@@ -65,6 +79,11 @@ public class ElytraDisabled extends JavaPlugin {
 
     private void cacheConfigValues() {
         this.bypassPermission = config.getString("permissions.bypass", "elytradisabled.bypass");
+        this.preventEquip = config.getBoolean("settings.prevent_equip", true);
+        this.forceUnequipOnEnter = config.getBoolean("settings.force_unequip_on_enter", true);
+        this.stopExistingGlide = config.getBoolean("settings.stop_existing_glide", true);
+        this.messageCooldownMillis = config.getLong("settings.message_cooldown", 3) * 1000L;
+        this.safetyNetIntervalTicks = config.getLong("settings.safety_net_interval_ticks", 100);
     }
 
     private void checkForUpdates() {
@@ -86,21 +105,32 @@ public class ElytraDisabled extends JavaPlugin {
         });
     }
 
+    private void setupMetrics() {
+        if (BSTATS_PLUGIN_ID <= 0) {
+            getLogger().warning("bStats plugin ID is not configured. Set BSTATS_PLUGIN_ID in ElytraDisabled.java.");
+            return;
+        }
+        new Metrics(this, BSTATS_PLUGIN_ID);
+    }
+
+    private void setupPlaceholders() {
+        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") == null) {
+            return;
+        }
+        new ElytraPlaceholders(this).register();
+        getLogger().info("PlaceholderAPI found, placeholders registered.");
+    }
+
     private void startCooldownCleanup() {
-        Bukkit.getScheduler().runTaskTimer(this, () -> {
-            if (listener != null) {
-                listener.cleanUpCooldowns();
-            }
-            if (tickChecker != null) {
-                tickChecker.cleanUpCooldowns();
-            }
-        }, COOLDOWN_CLEANUP_INTERVAL, COOLDOWN_CLEANUP_INTERVAL);
+        Bukkit.getScheduler().runTaskTimer(this,
+                () -> messageCooldown.cleanUp(messageCooldownMillis),
+                COOLDOWN_CLEANUP_INTERVAL, COOLDOWN_CLEANUP_INTERVAL);
     }
 
     @Override
     public void onDisable() {
-        if (tickChecker != null) {
-            tickChecker.stop();
+        if (safetyNetTask != null) {
+            safetyNetTask.stop();
         }
         getLogger().info("ElytraDisabled disabled!");
     }
@@ -171,28 +201,47 @@ public class ElytraDisabled extends JavaPlugin {
     }
 
     public String getMessage(String key) {
-        String message = langConfig.getString(key);
-        if (message == null || message.isEmpty()) {
-            getLogger().warning("Message with key '" + key + "' not found in language file!");
-            return "[" + key + "]";
-        }
-        return message.replace('&', '§');
+        return getRichMessage(key).toPlainText();
     }
 
-    public void playBlockSound(Player p) {
-        if (!config.getBoolean("settings.play_sound", true) || p == null || !p.isOnline()) {
-            return;
+    private List<String> getMessageLines(String key) {
+        if (langConfig.isList(key)) {
+            List<String> list = langConfig.getStringList(key);
+            if (!list.isEmpty()) return list;
         }
 
-        try {
-            String soundType = config.getString("settings.sound_type", "ENTITY_VILLAGER_NO");
-            org.bukkit.Sound sound = org.bukkit.Sound.valueOf(soundType);
-            p.playSound(p.getLocation(), sound, 1.0f, 1.0f);
-        } catch (IllegalArgumentException e) {
-            getLogger().warning("Invalid sound type in config: " + config.getString("settings.sound_type"));
-            getLogger().warning("Using default sound: ENTITY_VILLAGER_NO");
-            p.playSound(p.getLocation(), org.bukkit.Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
+        String single = langConfig.getString(key);
+        if (single == null || single.isEmpty()) {
+            getLogger().warning("Message with key '" + key + "' not found in language file!");
+            return Collections.singletonList("[" + key + "]");
         }
+        return Collections.singletonList(single);
+    }
+
+    private RichMessage getRichMessage(String key) {
+        return RichMessage.parse(getMessageLines(key), getLogger());
+    }
+
+    private boolean isMessageDisabled(String key) {
+        return langConfig.isBoolean(key) && !langConfig.getBoolean(key);
+    }
+
+    public void sendBlockedWarning(Player p, String messageKey) {
+        if (p == null || !p.isOnline()) return;
+        if (isMessageDisabled(messageKey)) return;
+        if (!messageCooldown.allow(p, messageCooldownMillis)) return;
+        getRichMessage(messageKey).send(p);
+    }
+
+    public void sendMessage(Player p, String messageKey) {
+        if (p == null || !p.isOnline()) return;
+        if (isMessageDisabled(messageKey)) return;
+        getRichMessage(messageKey).send(p);
+    }
+
+    public void sendCommandMessage(CommandSender sender, String messageKey) {
+        if (isMessageDisabled(messageKey)) return;
+        sender.sendMessage(getMessage(messageKey));
     }
 
     public boolean removeElytra(Player p, String messageKey) {
@@ -217,10 +266,8 @@ public class ElytraDisabled extends JavaPlugin {
                     p.setGliding(false);
                 }
 
-                playBlockSound(p);
-
                 if (messageKey != null && !messageKey.isEmpty()) {
-                    p.sendMessage(getMessage(messageKey));
+                    sendMessage(p, messageKey);
                 }
 
                 return true;
@@ -239,21 +286,21 @@ public class ElytraDisabled extends JavaPlugin {
         setupLanguage();
         cacheConfigValues();
 
-        if (tickChecker != null) {
-            tickChecker.stop();
-            tickChecker = null;
+        if (safetyNetTask != null) {
+            safetyNetTask.stop();
+            safetyNetTask = null;
         }
 
-        startTickChecker();
+        startSafetyNet();
         if (config.getBoolean("settings.check_updates", true)) {
             checkForUpdates();
         }
     }
 
-    private void startTickChecker() {
-        if (config.getBoolean("settings.check_every_tick", true)) {
-            tickChecker = new ElytraTickChecker(this);
-            tickChecker.start();
+    private void startSafetyNet() {
+        if (safetyNetIntervalTicks > 0) {
+            safetyNetTask = new ElytraSafetyNetTask(this);
+            safetyNetTask.start(safetyNetIntervalTicks);
         }
     }
 
@@ -267,5 +314,17 @@ public class ElytraDisabled extends JavaPlugin {
 
     public long getRespawnDelayTicks() {
         return RESPAWN_DELAY_TICKS;
+    }
+
+    public boolean isPreventEquip() {
+        return preventEquip;
+    }
+
+    public boolean isForceUnequipOnEnter() {
+        return forceUnequipOnEnter;
+    }
+
+    public boolean isStopExistingGlide() {
+        return stopExistingGlide;
     }
 }

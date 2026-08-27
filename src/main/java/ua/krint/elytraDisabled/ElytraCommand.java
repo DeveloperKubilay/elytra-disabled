@@ -20,7 +20,7 @@ public class ElytraCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!sender.hasPermission("elytradisabled.reload")) {
-            sender.sendMessage(plugin.getMessage("no_permission"));
+            plugin.sendCommandMessage(sender, "no_permission");
             return true;
         }
 
@@ -32,9 +32,9 @@ public class ElytraCommand implements CommandExecutor, TabCompleter {
         if (args[0].equalsIgnoreCase("reload")) {
             try {
                 plugin.reloadPluginConfig();
-                sender.sendMessage(plugin.getMessage("reload_success"));
+                plugin.sendCommandMessage(sender, "reload_success");
             } catch (Exception e) {
-                sender.sendMessage(plugin.getMessage("reload_error"));
+                plugin.sendCommandMessage(sender, "reload_error");
                 sender.sendMessage("§c" + e.getMessage());
                 e.printStackTrace();
             }
@@ -67,6 +67,6 @@ public class ElytraCommand implements CommandExecutor, TabCompleter {
     }
 
     private void sendHelp(CommandSender sender) {
-        sender.sendMessage(plugin.getMessage("help_reload"));
+        plugin.sendCommandMessage(sender, "help_reload");
     }
 }

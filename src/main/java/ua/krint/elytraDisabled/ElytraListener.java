@@ -1,50 +1,60 @@
 package ua.krint.elytraDisabled;
 
+import com.destroystokyo.paper.event.player.PlayerArmorChangeEvent;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityToggleGlideEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-
 public class ElytraListener implements Listener {
 
     private final ElytraDisabled plugin;
-    private final Map<UUID, Long> messageCooldowns;
 
     public ElytraListener(ElytraDisabled plugin) {
         this.plugin = plugin;
-        this.messageCooldowns = new HashMap<>();
     }
 
-    public void cleanUpCooldowns() {
-        long now = System.currentTimeMillis();
-        long cooldown = plugin.getConfig().getLong("settings.message_cooldown", 3000);
-        messageCooldowns.entrySet().removeIf(entry -> (now - entry.getValue()) > cooldown * 2);
+    private void warn(Player p, String messageKey) {
+        plugin.sendBlockedWarning(p, messageKey);
     }
 
-    private boolean sendMessageWithCooldown(Player p, String message) {
-        UUID uuid = p.getUniqueId();
-        long now = System.currentTimeMillis();
-        long cooldown = plugin.getConfig().getLong("settings.message_cooldown", 3000);
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onToggleGlide(EntityToggleGlideEvent e) {
+        if (!e.isGliding()) return;
+        if (!(e.getEntity() instanceof Player)) return;
 
-        Long lastMessage = messageCooldowns.get(uuid);
-        if (lastMessage != null && (now - lastMessage) < cooldown) {
-            return false;
-        }
+        Player p = (Player) e.getEntity();
 
-        messageCooldowns.put(uuid, now);
-        p.sendMessage(message);
-        return true;
+        if (plugin.hasBypass(p)) return;
+        if (!plugin.isWorldDisabled(p.getWorld())) return;
+        if (!plugin.isStopExistingGlide()) return;
+
+        e.setCancelled(true);
+        warn(p, "glide_blocked");
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onArmorChange(PlayerArmorChangeEvent e) {
+        if (e.getSlotType() != PlayerArmorChangeEvent.SlotType.CHEST) return;
+
+        ItemStack newItem = e.getNewItem();
+        if (newItem == null || newItem.getType() != Material.ELYTRA) return;
+
+        Player p = e.getPlayer();
+
+        if (plugin.hasBypass(p)) return;
+        if (!plugin.isWorldDisabled(p.getWorld())) return;
+        if (!plugin.isPreventEquip()) return;
+
+        plugin.removeElytra(p, null);
+        warn(p, "equip_blocked");
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -56,7 +66,7 @@ public class ElytraListener implements Listener {
 
         if (!plugin.isWorldDisabled(p.getWorld())) return;
 
-        if (!plugin.getConfig().getBoolean("settings.prevent_equip", true)) return;
+        if (!plugin.isPreventEquip()) return;
 
         ItemStack cursor = e.getCursor();
         ItemStack current = e.getCurrentItem();
@@ -64,8 +74,7 @@ public class ElytraListener implements Listener {
         if (e.isShiftClick() && current != null && current.getType() == Material.ELYTRA) {
             if (e.getSlotType() != InventoryType.SlotType.ARMOR) {
                 e.setCancelled(true);
-                sendMessageWithCooldown(p, plugin.getMessage("equip_blocked"));
-                plugin.playBlockSound(p);
+                warn(p, "equip_blocked");
                 return;
             }
         }
@@ -73,8 +82,7 @@ public class ElytraListener implements Listener {
         if (e.getSlotType() == InventoryType.SlotType.ARMOR) {
             if (cursor != null && cursor.getType() == Material.ELYTRA) {
                 e.setCancelled(true);
-                sendMessageWithCooldown(p, plugin.getMessage("equip_blocked"));
-                plugin.playBlockSound(p);
+                warn(p, "equip_blocked");
                 return;
             }
 
@@ -85,8 +93,7 @@ public class ElytraListener implements Listener {
 
         if (e.getClick().name().contains("SWAP") && current != null && current.getType() == Material.ELYTRA) {
             e.setCancelled(true);
-            sendMessageWithCooldown(p, plugin.getMessage("equip_blocked"));
-            plugin.playBlockSound(p);
+            warn(p, "equip_blocked");
         }
     }
 
@@ -96,13 +103,12 @@ public class ElytraListener implements Listener {
 
         if (plugin.hasBypass(p)) return;
         if (!plugin.isWorldDisabled(p.getWorld())) return;
-        if (!plugin.getConfig().getBoolean("settings.prevent_equip", true)) return;
+        if (!plugin.isPreventEquip()) return;
 
         ItemStack item = e.getItem();
         if (item != null && item.getType() == Material.ELYTRA) {
             if (e.getAction().name().contains("RIGHT")) {
-                sendMessageWithCooldown(p, plugin.getMessage("equip_blocked"));
-                plugin.playBlockSound(p);
+                warn(p, "equip_blocked");
                 e.setCancelled(true);
             }
         }
@@ -114,7 +120,7 @@ public class ElytraListener implements Listener {
 
         if (plugin.hasBypass(p)) return;
         if (!plugin.isWorldDisabled(p.getWorld())) return;
-        if (!plugin.getConfig().getBoolean("settings.force_unequip_on_enter", true)) return;
+        if (!plugin.isForceUnequipOnEnter()) return;
 
         plugin.removeElytra(p, "removed_on_enter");
     }
@@ -126,7 +132,7 @@ public class ElytraListener implements Listener {
 
         if (plugin.hasBypass(p)) return;
         if (to == null || !plugin.isWorldDisabled(to)) return;
-        if (!plugin.getConfig().getBoolean("settings.force_unequip_on_enter", true)) return;
+        if (!plugin.isForceUnequipOnEnter()) return;
 
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             if (p.isOnline() && plugin.isWorldDisabled(p.getWorld())) {
@@ -141,7 +147,7 @@ public class ElytraListener implements Listener {
 
         if (plugin.hasBypass(p)) return;
         if (!plugin.isWorldDisabled(p.getWorld())) return;
-        if (!plugin.getConfig().getBoolean("settings.force_unequip_on_enter", true)) return;
+        if (!plugin.isForceUnequipOnEnter()) return;
 
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             if (p.isOnline()) {
@@ -156,7 +162,7 @@ public class ElytraListener implements Listener {
 
         if (plugin.hasBypass(p)) return;
         if (!plugin.isWorldDisabled(e.getRespawnLocation().getWorld())) return;
-        if (!plugin.getConfig().getBoolean("settings.force_unequip_on_enter", true)) return;
+        if (!plugin.isForceUnequipOnEnter()) return;
 
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             if (p.isOnline()) {
@@ -174,10 +180,9 @@ public class ElytraListener implements Listener {
 
         if (plugin.hasBypass(p)) return;
         if (!plugin.isWorldDisabled(p.getWorld())) return;
-        if (!plugin.getConfig().getBoolean("settings.prevent_equip", true)) return;
+        if (!plugin.isPreventEquip()) return;
 
         e.setCancelled(true);
-        sendMessageWithCooldown(p, plugin.getMessage("equip_blocked"));
-        plugin.playBlockSound(p);
+        warn(p, "equip_blocked");
     }
 }

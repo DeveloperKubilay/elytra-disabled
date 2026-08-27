@@ -1,8 +1,39 @@
+# ===================================================================
+# Message format
+# ===================================================================
+# A plain string = a chat message, no sound (see reload_success below).
+# For actionbar/title/sound, use a list: the first line in [square brackets] sets
+# options, the rest is text (with & colors):
+#
+# equip_blocked:
+#   - '[type="title",title_times="10:40:10",sound="minecraft:entity.villager.no;1.0;1.0"]'
+#   - '&cOops!'
+#   - '&7You can''t equip elytra here'
+#
+# type: chat (default) / actionbar / title
+# title_times: "fade_in:stay:fade_out" in ticks (20 = 1 second), only used for title
+# sound: "sound;volume;pitch" - minecraft:entity.villager.no or ENTITY_VILLAGER_NO,
+#        volume/pitch optional
+# chat sends every line, actionbar only the first, title the first + second (subtitle)
+#
+# Disable a message: set its value to false (do NOT delete or comment out the key -
+# on /reload the plugin re-adds keys missing from your file from the defaults, but
+# leaves an explicit false alone):
+#
+# equip_blocked: false
+# ===================================================================
+
 # Message when trying to equip elytra
-equip_blocked: "&cYou cannot equip elytra in this world!"
+equip_blocked:
+  - '[type="title",title_times="10:40:10",sound="minecraft:entity.villager.no;1.0;1.0"]'
+  - '&cOops!'
+  - '&7You can''t equip elytra here'
 
 # Message when trying to glide
-glide_blocked: "&cElytra flying is disabled in this world!"
+glide_blocked:
+  - '[type="title",title_times="10:40:10",sound="minecraft:entity.villager.no;1.0;1.0"]'
+  - '&cOops!'
+  - '&7Elytra flying is disabled here'
 
 # Message when elytra is automatically removed
 removed_on_enter: "&eYour elytra has been removed upon entering this world."
