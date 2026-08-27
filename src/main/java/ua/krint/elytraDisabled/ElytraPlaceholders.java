@@ -39,13 +39,17 @@ public class ElytraPlaceholders extends PlaceholderExpansion {
 
         switch (params.toLowerCase()) {
             case "world_disabled":
-                return String.valueOf(plugin.isWorldDisabled(player.getWorld()));
+                return bool(plugin.isWorldDisabled(player.getWorld()));
             case "bypass":
-                return String.valueOf(plugin.hasBypass(player));
+                return bool(plugin.hasBypass(player));
             case "blocked":
-                return String.valueOf(plugin.isWorldDisabled(player.getWorld()) && !plugin.hasBypass(player));
+                return bool(plugin.isWorldDisabled(player.getWorld()) && !plugin.hasBypass(player));
             default:
                 return null;
         }
+    }
+
+    private String bool(boolean value) {
+        return plugin.getMessage(value ? "placeholder_true" : "placeholder_false");
     }
 }

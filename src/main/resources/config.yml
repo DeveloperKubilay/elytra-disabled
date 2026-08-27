@@ -54,6 +54,20 @@ settings:
   # their sound are configured per-message in lang/<language>.yml, not here.
   # See the comments at the top of lang/en.yml.
 
+# ===================================================================
+# PlaceholderAPI (если установлен на сервере) / PlaceholderAPI (if installed)
+# ===================================================================
+# %elytradisabled_world_disabled% - запрещены ли элитры в текущем мире игрока
+# %elytradisabled_bypass%         - есть ли у игрока право обхода (bypass)
+# %elytradisabled_blocked%        - реально ли блокируется прямо сейчас (мир запрещён И нет bypass)
+# Текст для true/false настраивается в lang/<язык>.yml: placeholder_true / placeholder_false
+#
+# %elytradisabled_world_disabled% - whether elytra is disabled in the player's current world
+# %elytradisabled_bypass%         - whether the player has the bypass permission
+# %elytradisabled_blocked%        - whether it's actually being blocked right now (world
+#                                    disabled AND no bypass)
+# The true/false text is configured in lang/<language>.yml: placeholder_true / placeholder_false
+
 permissions:
   # Игроки с этим пермишеном могут использовать элитры в любых мирах
   # Players with this permission can use elytra in any worlds

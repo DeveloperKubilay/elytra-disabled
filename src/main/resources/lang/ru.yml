@@ -46,3 +46,8 @@ help_reload: "&e/elytra-disabled reload &8- &7Перезагрузить кон�
 
 # Сообщение при отсутствии прав
 no_permission: "&cУ вас нет прав для использования этой команды!"
+
+# Текст плейсхолдеров PlaceholderAPI (%elytradisabled_world_disabled%, %elytradisabled_bypass%,
+# %elytradisabled_blocked%) для значений true/false - можно заменить на "Да"/"Нет" и т.п.
+placeholder_true: "true"
+placeholder_false: "false"

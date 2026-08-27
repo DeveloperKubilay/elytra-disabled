@@ -47,3 +47,8 @@ help_reload: "&e/elytra-disabled reload &8- &7Reload configuration"
 
 # No permission message
 no_permission: "&cYou don't have permission to use this command!"
+
+# PlaceholderAPI text (%elytradisabled_world_disabled%, %elytradisabled_bypass%,
+# %elytradisabled_blocked%) for the true/false values - replace with "Yes"/"No" etc.
+placeholder_true: "true"
+placeholder_false: "false"
