@@ -144,6 +144,7 @@ public class ElytraDisabled extends JavaPlugin {
         saveResourceIfNotExists("lang/ru.yml");
         saveResourceIfNotExists("lang/en.yml");
         saveResourceIfNotExists("lang/ua.yml");
+        saveResourceIfNotExists("lang/tr.yml");
 
         currentLanguage = config.getString("settings.language", "ru");
         File langFile = new File(langFolder, currentLanguage + ".yml");
