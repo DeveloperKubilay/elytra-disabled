@@ -10,8 +10,8 @@ settings:
   # Check for plugin updates on startup
   check_updates: true
 
-  # Язык плагина (ru, en, ua) / Plugin language (ru, en, ua)
-  # ru - русский, en - english, ua - українська
+  # Язык плагина (ru, en, ua, tr) / Plugin language (ru, en, ua, tr)
+  # ru - русский, en - english, ua - українська, tr - Türkçe
   language: en
 
   # Кулдаун между сообщениями игроку (в секундах), чтобы не спамить при повторных попытках

@@ -54,8 +54,7 @@ public class ElytraDisabled extends JavaPlugin {
         setupLanguage();
         cacheConfigValues();
 
-        listener = new ElytraListener(this);
-        Bukkit.getPluginManager().registerEvents(listener, this);
+        registerListeners();
 
         startSafetyNet();
 
@@ -84,6 +83,24 @@ public class ElytraDisabled extends JavaPlugin {
         this.stopExistingGlide = config.getBoolean("settings.stop_existing_glide", true);
         this.messageCooldownMillis = config.getLong("settings.message_cooldown", 3) * 1000L;
         this.safetyNetIntervalTicks = config.getLong("settings.safety_net_interval_ticks", 100);
+    }
+
+    private void registerListeners() {
+        listener = new ElytraListener(this);
+        Bukkit.getPluginManager().registerEvents(listener, this);
+
+        if (isPaperArmorChangeEventAvailable()) {
+            Bukkit.getPluginManager().registerEvents(new PaperArmorChangeListener(this), this);
+        }
+    }
+
+    private boolean isPaperArmorChangeEventAvailable() {
+        try {
+            Class.forName("com.destroystokyo.paper.event.player.PlayerArmorChangeEvent");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
     }
 
     private void checkForUpdates() {
@@ -144,6 +161,7 @@ public class ElytraDisabled extends JavaPlugin {
         saveResourceIfNotExists("lang/ru.yml");
         saveResourceIfNotExists("lang/en.yml");
         saveResourceIfNotExists("lang/ua.yml");
+        saveResourceIfNotExists("lang/tr.yml");
 
         currentLanguage = config.getString("settings.language", "ru");
         File langFile = new File(langFolder, currentLanguage + ".yml");

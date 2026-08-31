@@ -9,13 +9,17 @@ https://modrinth.com/plugin/elytra-disabled
 
 - Complete blocking of equipping and flying with elytra
 - Auto-removal when entering restricted worlds
-- Advanced anti-bypass protection with tick-by-tick monitoring
+- Instant, event-driven anti-bypass protection (no per-tick polling), with a low-frequency
+  safety net for rare edge cases
 - Smart cooldown-based notifications to prevent spam
-- Multi-language support (English, Russian, Ukrainian)
-- Configurable sound effects for blocked actions
+- Multi-language support (English, Russian, Ukrainian, Turkish)
+- Per-message notification style (chat / action bar / title) and sound, configurable per
+  language in the lang files
+- PlaceholderAPI support
+- bStats usage statistics
 - Automatic update checking via Modrinth API
 - Protection against dispenser armor equip exploits
-- Optimized performance with efficient cooldown management
+- Works on both Paper and Spigot
 
 Perfect for servers that value fair gameplay, stability, and absolute control over elytra mechanics. ElytraDisabled ensures predictable player behavior and eliminates any possibility of unwanted flight exploits.
 ## config.yml
@@ -33,8 +37,8 @@ settings:
   # Check for plugin updates on startup
   check_updates: true
 
-  # Язык плагина (ru, en, ua) / Plugin language (ru, en, ua)
-  # ru - русский, en - english, ua - українська
+  # Язык плагина (ru, en, ua, tr) / Plugin language (ru, en, ua, tr)
+  # ru - русский, en - english, ua - українська, tr - Türkçe
   language: en
 
   # Кулдаун между сообщениями игроку (в секундах), чтобы не спамить при повторных попытках

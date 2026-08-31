@@ -1,6 +1,5 @@
 package ua.krint.elytraDisabled;
 
-import com.destroystokyo.paper.event.player.PlayerArmorChangeEvent;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
@@ -38,23 +37,6 @@ public class ElytraListener implements Listener {
 
         e.setCancelled(true);
         warn(p, "glide_blocked");
-    }
-
-    @EventHandler(priority = EventPriority.HIGHEST)
-    public void onArmorChange(PlayerArmorChangeEvent e) {
-        if (e.getSlotType() != PlayerArmorChangeEvent.SlotType.CHEST) return;
-
-        ItemStack newItem = e.getNewItem();
-        if (newItem == null || newItem.getType() != Material.ELYTRA) return;
-
-        Player p = e.getPlayer();
-
-        if (plugin.hasBypass(p)) return;
-        if (!plugin.isWorldDisabled(p.getWorld())) return;
-        if (!plugin.isPreventEquip()) return;
-
-        plugin.removeElytra(p, null);
-        warn(p, "equip_blocked");
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)

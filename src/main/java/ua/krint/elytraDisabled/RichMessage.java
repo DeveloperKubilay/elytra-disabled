@@ -1,12 +1,10 @@
 package ua.krint.elytraDisabled;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import net.kyori.adventure.title.Title;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -20,15 +18,15 @@ public class RichMessage {
     private static final Pattern META_ATTR = Pattern.compile("(\\w+)=\"([^\"]*)\"");
 
     private final String type;
-    private final long fadeInTicks;
-    private final long stayTicks;
-    private final long fadeOutTicks;
+    private final int fadeInTicks;
+    private final int stayTicks;
+    private final int fadeOutTicks;
     private final Sound sound;
     private final float volume;
     private final float pitch;
     private final List<String> lines;
 
-    private RichMessage(String type, long fadeInTicks, long stayTicks, long fadeOutTicks,
+    private RichMessage(String type, int fadeInTicks, int stayTicks, int fadeOutTicks,
                          Sound sound, float volume, float pitch, List<String> lines) {
         this.type = type;
         this.fadeInTicks = fadeInTicks;
@@ -42,7 +40,7 @@ public class RichMessage {
 
     public static RichMessage parse(List<String> rawLines, Logger logger) {
         String type = "chat";
-        long fadeIn = 10, stay = 40, fadeOut = 10;
+        int fadeIn = 10, stay = 40, fadeOut = 10;
         Sound sound = null;
         float volume = 1.0f;
         float pitch = 1.0f;
@@ -61,9 +59,9 @@ public class RichMessage {
                     String[] parts = value.split(":");
                     if (parts.length == 3) {
                         try {
-                            fadeIn = Long.parseLong(parts[0].trim());
-                            stay = Long.parseLong(parts[1].trim());
-                            fadeOut = Long.parseLong(parts[2].trim());
+                            fadeIn = Integer.parseInt(parts[0].trim());
+                            stay = Integer.parseInt(parts[1].trim());
+                            fadeOut = Integer.parseInt(parts[2].trim());
                         } catch (NumberFormatException ignored) {
                         }
                     }
@@ -121,26 +119,23 @@ public class RichMessage {
         }
     }
 
+    @SuppressWarnings("deprecation")
     public void send(Player p) {
         if (p == null || !p.isOnline()) return;
 
         switch (type) {
             case "actionbar":
-                p.sendActionBar(toComponent(lines.get(0)));
+                p.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(lines.get(0)));
                 break;
             case "title":
-                Component main = toComponent(lines.get(0));
-                Component subtitle = lines.size() > 1 ? toComponent(lines.get(1)) : Component.empty();
-                Title.Times times = Title.Times.times(
-                        Duration.ofMillis(fadeInTicks * 50L),
-                        Duration.ofMillis(stayTicks * 50L),
-                        Duration.ofMillis(fadeOutTicks * 50L));
-                p.showTitle(Title.title(main, subtitle, times));
+                String main = lines.get(0);
+                String subtitle = lines.size() > 1 ? lines.get(1) : "";
+                p.sendTitle(main, subtitle, fadeInTicks, stayTicks, fadeOutTicks);
                 break;
             case "chat":
             default:
                 for (String line : lines) {
-                    p.sendMessage(toComponent(line));
+                    p.sendMessage(line);
                 }
                 break;
         }
@@ -152,9 +147,5 @@ public class RichMessage {
 
     public String toPlainText() {
         return String.join("\n", lines);
-    }
-
-    private static Component toComponent(String legacyText) {
-        return LegacyComponentSerializer.legacySection().deserialize(legacyText);
     }
 }
